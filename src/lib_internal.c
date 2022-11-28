@@ -23,9 +23,10 @@ static void end_kernel(uint8_t);
 #include "progs/prog1.h"
 #include "progs/prog2.h"
 #include "progs/prog3.h"
+#include "progs/prog4.h"
 
 // Array of function pointers for the 'main' entry points
-#define NUM_PROGS 3
+#define NUM_PROGS 4
 int cur_prog;
 void (*progs[NUM_PROGS]) (void);
 
@@ -36,6 +37,7 @@ void program_constructor(void)
     progs[0] = &prog1_main;
     progs[1] = &prog2_main;
     progs[2] = &prog3_main;
+    progs[3] = &prog4_main;
 }
 
 // Main interrupt handler
