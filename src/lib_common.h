@@ -4,5 +4,6 @@
 #define PRINT_STR 0
 #define PRINT_HEX 1
 #define YIELD     2
+#define TIME      3
 
 #endif

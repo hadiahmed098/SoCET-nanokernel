@@ -12,6 +12,11 @@ void print_hex(uint32_t);
 // Terminates the user program
 void yield(void);
 
+// Trigger a time interrupt after some interval.
+// NOTE: due to interrupt/exception overhead,
+//  interval will not start precisely when this method is called.
+void set_timeout(uint16_t);
+
 // Read the 'time' or 'timeh' CSR
 uint32_t read_time(int);
 

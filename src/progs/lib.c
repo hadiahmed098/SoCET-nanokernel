@@ -24,6 +24,11 @@ void USER_PROG(lib) yield(void)
     make_ecall(YIELD, 0);
 }
 
+void USER_PROG(lib) set_timeout(uint16_t interval)
+{
+    make_ecall(TIME, &interval);
+}
+
 uint32_t USER_PROG(lib) read_time(int upper)
 {
     uint32_t temp;

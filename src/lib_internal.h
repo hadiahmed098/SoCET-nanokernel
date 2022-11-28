@@ -11,4 +11,6 @@ void sys_print_hex(uint32_t);
 
 void sys_yield(void);
 
+void sys_time(uint16_t);
+
 #endif

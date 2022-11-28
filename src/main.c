@@ -14,12 +14,17 @@ void main(void)
     // Create a new stack for the user programs
     uint32_t curr_sp = 0x2007FFF;
 
-    // Setup mstatus, pmp, etc
+    // Setup the interrupt handler
     uint32_t mtvec_value = (uint32_t) handler;
     mtvec_value |= 1; // set to vectored mode
     asm volatile("csrw mtvec, %0" : : "r"(mtvec_value));
+    // Enable all interrupts
+    uint32_t mie_value = 0x888;
+    asm volatile("csrw mie, %0" : : "r"(mie_value));
+    // Globally enable interrupts
     uint32_t mstatus_value = 0x8;
     asm volatile("csrs mstatus, %0" : : "r" (mstatus_value));
+    // Allow program execution with PMP
     asm volatile("csrw pmpaddr0, %0" : : "r"(((uint32_t) &_suserprog) >> 2));
     asm volatile("csrw pmpaddr1, %0" : : "r"(((uint32_t) ((&_euserprog) + 1)) >> 2));
     asm volatile("csrw pmpaddr2, %0" : : "r"(curr_sp));

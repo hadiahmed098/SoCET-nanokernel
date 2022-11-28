@@ -66,6 +66,8 @@ void __attribute__((interrupt)) int_handler()
     sys_print_str("\n");
 
     asm volatile("csrw mip, zero"); // Just destroy every pending interrupt
+    volatile uint32_t *mtimecmph = (volatile uint32_t*) MTIMECMPH_ADDR;
+    *mtimecmph = 0x1 << 30; // Set some very large number
 }
 
 // Main exception handler
@@ -76,7 +78,7 @@ void __attribute__((interrupt)) ex_handler()
     asm volatile("add %0, a0, zero" : "=r" (type));
     asm volatile("add %0, a1, zero" : "=r" (arg));
 
-    uint32_t mepc, mtval;
+    uint32_t mepc, mtval, mstatus;
     mcause_t mcause;
     asm volatile("csrr %0, mepc" : "=r"(mepc));
     asm volatile("csrr %0, mtval" : "=r"(mtval));
@@ -121,7 +123,11 @@ void __attribute__((interrupt)) ex_handler()
             sys_yield();
             __builtin_unreachable(); // yield should never come back to here
             break;
-        
+
+        case TIME:
+            sys_time(*((uint16_t*)arg));
+            break;
+
         default:
             sys_print_str("\n[kern]: unknown request: ");
             sys_print_hex(type);
@@ -220,7 +226,20 @@ void sys_print_hex(uint32_t x)
     sys_print_str(buf);
 }
 
-static void __attribute__((noinline)) end_kernel(void)
+void sys_time(uint16_t interval)
+{
+    volatile uint32_t *mtime = (volatile uint32_t*) MTIME_ADDR;
+    volatile uint32_t *mtimeh = (volatile uint32_t*) MTIMEH_ADDR;
+    volatile uint32_t *mtimecmp = (volatile uint32_t*) MTIMECMP_ADDR;
+    volatile uint32_t *mtimecmph = (volatile uint32_t*) MTIMECMPH_ADDR;
+
+    uint64_t time = ((uint64_t) *mtimeh << 32) | (*mtime);
+    time += interval;
+    *mtimecmph = time >> 32;
+    *mtimecmp = time & UINT32_MAX;
+}
+
+static void __attribute__((noinline)) end_kernel(uint8_t val)
 {
     // Careful! Adding stuff to this function that uses anything other than
     //  basic registers might cause GCC to restore ra after we changed it
