@@ -17,6 +17,9 @@ typedef struct {
     int interrupt : 1;
 } mcause_t;
 
+// The parameter is the exit code, '1' is success
+static void end_kernel(uint8_t);
+
 #include "progs/prog1.h"
 #include "progs/prog2.h"
 #include "progs/prog3.h"
@@ -45,7 +48,7 @@ void __attribute__((interrupt)) int_handler()
     asm volatile("csrr %0, mip" : "=r"(mip));
     sys_print_str("\n[kern]: interrupt handled:\n");
     sys_print_str("[kern]: currently executing program ");
-    sys_print_hex(cur_prog);
+    sys_print_hex(cur_prog + 1);
     sys_print_str("\n");
 
     sys_print_str("[kern]: mcause: ");
@@ -78,8 +81,31 @@ void __attribute__((interrupt)) ex_handler()
     asm volatile("csrr %0, mepc" : "=r"(mepc));
     asm volatile("csrr %0, mtval" : "=r"(mtval));
     asm volatile("csrr %0, mcause" : "=r"(mcause));
+    asm volatile("csrr %0, mstatus": "=r"(mstatus));
 
-    if (mcause.ex_code == 0x8) 
+    if ((mstatus & 0x1800) == 0x1800) // The kernel was in machine mode when an exception occured
+    {
+        sys_print_str("\n\n[kern]: FATAL ERROR: KERNEL PANIC\n");
+        sys_print_str("[kern]: Exception occured while handling an interrupt or exception\n");
+        sys_print_str("[kern]: mepc: ");
+        sys_print_hex(mepc);
+        sys_print_str("\n");
+
+        sys_print_str("[kern]: mtval: ");
+        sys_print_hex(mtval);
+        sys_print_str("\n");
+
+        sys_print_str("[kern]: mcause: ");
+        sys_print_hex(mcause.interrupt & 0x1);
+        sys_print_str(" ");
+        sys_print_hex(mcause.ex_code);
+        sys_print_str("\n");
+
+        end_kernel(0);
+        __builtin_unreachable();
+    }
+
+    if (mcause.ex_code == 0x8)
     {
         switch (type)
         {
@@ -90,18 +116,18 @@ void __attribute__((interrupt)) ex_handler()
         case PRINT_HEX:
             sys_print_hex(*((uint32_t*)arg));
             break;
-        
+
         case YIELD:
             sys_yield();
             __builtin_unreachable(); // yield should never come back to here
             break;
         
         default:
-            sys_print_str("[kern]: unknown request: ");
+            sys_print_str("\n[kern]: unknown request: ");
             sys_print_hex(type);
             sys_print_str(" ");
-            sys_print_hex(*((uint32_t*)arg));
-            sys_print_str("\n");
+            sys_print_hex((uint32_t) arg);
+            sys_print_str("\n\n");
             break;
         }
 
@@ -113,7 +139,7 @@ void __attribute__((interrupt)) ex_handler()
     {
         sys_print_str("\n[kern]: PROGRAM ERROR:\n");
         sys_print_str("[kern]: exception in program ");
-        sys_print_hex(cur_prog);
+        sys_print_hex(cur_prog + 1);
         sys_print_str("\n");
 
         sys_print_str("[kern]: mepc: ");
@@ -181,7 +207,7 @@ void sys_print_hex(uint32_t x)
     char buf[11] = {0};
     buf[0] = '0';
     buf[1] = 'x';
-    
+
     for(int i = 2; i < 10; i++) {
         uint8_t value = (x & 0xF);
         if(value >= 10) {
@@ -209,12 +235,12 @@ void __attribute__((noreturn)) sys_yield(void)
     if (++cur_prog == NUM_PROGS)
     {
         sys_print_str("\n[kern]: last program run, exiting\n");
-        end_kernel();
+        end_kernel(1);
         __builtin_unreachable();
     }
 
     sys_print_str("\n[kern]: starting program ");
-    sys_print_hex(cur_prog);
+    sys_print_hex(cur_prog + 1);
     sys_print_str("\n\n");
 
     // Setup the proper ending function

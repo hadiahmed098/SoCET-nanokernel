@@ -9,7 +9,6 @@ _start:
 
 .global done
 done:
-    addi x28, zero, 1           # Sets register 28 to 1 to pass a test bench
+    add x28, a0, zero           # Get return code from kernel
 __inf_loop:
     j __inf_loop                # Halts the processor with an infinite self loop
- 
