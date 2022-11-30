@@ -44,13 +44,19 @@ void program_constructor(void)
 void __attribute__((interrupt)) int_handler()
 {
     mcause_t mcause;
-    uint32_t mie, mip;
+    uint32_t mie, mip, mstatus;
     asm volatile("csrr %0, mcause" : "=r"(mcause));
     asm volatile("csrr %0, mie" : "=r"(mie));
     asm volatile("csrr %0, mip" : "=r"(mip));
+    asm volatile("csrr %0, mstatus" : "=r"(mstatus));
+
     sys_print_str("\n[kern]: interrupt handled:\n");
     sys_print_str("[kern]: currently executing program ");
     sys_print_hex(cur_prog + 1);
+    sys_print_str("\n");
+
+    sys_print_str("[kern]: mstatus: ");
+    sys_print_hex(mstatus);
     sys_print_str("\n");
 
     sys_print_str("[kern]: mcause: ");
@@ -64,8 +70,8 @@ void __attribute__((interrupt)) int_handler()
     sys_print_str("\n");
 
     sys_print_str("[kern]: mip: ");
-    sys_print_hex(mie);
-    sys_print_str("\n");
+    sys_print_hex(mip);
+    sys_print_str("\n\n");
 
     asm volatile("csrw mip, zero"); // Just destroy every pending interrupt
     volatile uint32_t *mtimecmph = (volatile uint32_t*) MTIMECMPH_ADDR;
@@ -246,6 +252,7 @@ static void __attribute__((noinline)) end_kernel(uint8_t val)
     // Careful! Adding stuff to this function that uses anything other than
     //  basic registers might cause GCC to restore ra after we changed it
     uint32_t old_ra;
+    asm volatile("add a0, %0, zero" : : "r"(val)); // This is a nop, but it prevents GCC from optimizing 'val' out
     asm volatile("csrr %0, mscratch" : "=r"(old_ra));
     asm volatile("add ra, %0, zero" : : "r"(old_ra)); // Clobber ra but don't tell GCC
 }

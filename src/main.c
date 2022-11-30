@@ -22,7 +22,7 @@ void main(void)
     uint32_t mie_value = 0x888;
     asm volatile("csrw mie, %0" : : "r"(mie_value));
     // Globally enable interrupts
-    uint32_t mstatus_value = 0x8;
+    uint32_t mstatus_value = 0x80;
     asm volatile("csrs mstatus, %0" : : "r" (mstatus_value));
     // Allow program execution with PMP
     asm volatile("csrw pmpaddr0, %0" : : "r"(((uint32_t) &_suserprog) >> 2));
